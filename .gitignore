@@ -1,0 +1,14 @@
+# Gradle
+.gradle/
+build/
+
+# Maven (legacy)
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

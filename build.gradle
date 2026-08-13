@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+    id 'war'
+    id 'org.springframework.boot' version '3.4.5'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.dnd'
+version = '1.0.0'
+description = 'Water Tasting app for the D&D weekend'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+    runtimeOnly 'com.h2database:h2'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+springBoot {
+    mainClass = 'com.dnd.watertasting.WaterTastingApplication'
+}
+
+bootWar {
+    archiveFileName = 'watertasting.war'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
