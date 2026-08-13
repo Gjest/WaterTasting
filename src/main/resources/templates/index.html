@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Water Tasting - D&D Weekend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Cinzel"', 'serif'],
+                        body: ['"Lato"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-950 text-slate-100 font-body min-h-screen antialiased">
+
+<header class="sticky top-0 z-10 border-b border-amber-500/20 bg-slate-950/90 backdrop-blur">
+    <div class="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+        <div>
+            <h1 class="font-display text-lg sm:text-xl font-bold text-amber-400 tracking-wide">Water Tasting</h1>
+            <p class="text-xs text-slate-400">Adventurer's Guild &middot; D&D Weekend</p>
+        </div>
+        <a th:href="@{/results}"
+           class="shrink-0 text-sm font-semibold text-slate-200 border border-slate-700 rounded-lg px-3 py-1.5 hover:border-amber-400 hover:text-amber-300 transition-colors">
+            Results
+        </a>
+    </div>
+</header>
+
+<main class="max-w-2xl mx-auto px-4 pb-20">
+
+    <div th:if="${success}" th:text="${success}"
+         class="mt-5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 px-4 py-3 text-sm font-semibold">
+    </div>
+
+    <div class="mt-8 mb-6">
+        <h2 class="font-display text-2xl font-bold text-slate-100">The Tasting</h2>
+        <p class="mt-1 text-sm text-slate-400">
+            Swirl, sniff, sip, and judge. Each metric runs from
+            <span class="text-amber-300">[1]</span> to
+            <span class="text-amber-300">[5]</span>.
+        </p>
+    </div>
+
+    <form th:action="@{/submit}" th:object="${tasting}" method="post"
+          class="space-y-8">
+
+        <div class="space-y-4">
+            <div>
+                <label for="adventurerName" class="block text-sm font-semibold text-slate-200">Adventurer Name</label>
+                <input type="text" id="adventurerName" th:field="*{adventurerName}"
+                       placeholder="Who is tasting?"
+                       class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm placeholder-slate-500 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400">
+                <p th:if="${#fields.hasErrors('adventurerName')}" th:errors="*{adventurerName}"
+                   class="mt-1 text-xs text-rose-400"></p>
+            </div>
+            <div>
+                <label for="waterSampleId" class="block text-sm font-semibold text-slate-200">Water Sample ID</label>
+                <input type="text" id="waterSampleId" th:field="*{waterSampleId}"
+                       placeholder="e.g. SAMPLE-01 or Dungeon Spring"
+                       class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm placeholder-slate-500 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400">
+                <p th:if="${#fields.hasErrors('waterSampleId')}" th:errors="*{waterSampleId}"
+                   class="mt-1 text-xs text-rose-400"></p>
+            </div>
+        </div>
+
+        <section>
+            <h3 class="font-display text-sm font-bold uppercase tracking-widest text-amber-500">Visuals - The Eye</h3>
+            <div class="mt-3 space-y-3">
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="clarity" class="text-sm font-semibold text-slate-200">Clarity</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Turbid / Cloudy [1] &rarr; Crystal Clear [5]</p>
+                    <input type="range" id="clarity" th:field="*{clarity}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="color" class="text-sm font-semibold text-slate-200">Color</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Colorless [1] &rarr; Tinted / Infused [5]</p>
+                    <input type="range" id="color" th:field="*{color}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3 class="font-display text-sm font-bold uppercase tracking-widest text-amber-500">Aroma - The Nose</h3>
+            <div class="mt-3 space-y-3">
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="odor" class="text-sm font-semibold text-slate-200">Odor</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">None / Neutral [1] &rarr; Strong / Earthy / Metallic [5]</p>
+                    <input type="range" id="odor" th:field="*{odor}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3 class="font-display text-sm font-bold uppercase tracking-widest text-amber-500">Mouthfeel - The Texture</h3>
+            <div class="mt-3 space-y-3">
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="carbonation" class="text-sm font-semibold text-slate-200">Carbonation</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Still [1] &rarr; Highly Effervescent / Fizzy [5]</p>
+                    <input type="range" id="carbonation" th:field="*{carbonation}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="temperature" class="text-sm font-semibold text-slate-200">Temperature</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Ice Cold / Frigid [1] &rarr; Tepid / Room Temp [5]</p>
+                    <input type="range" id="temperature" th:field="*{temperature}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="body" class="text-sm font-semibold text-slate-200">Body / Weight</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Thin / Light [1] &rarr; Heavy / Silky [5]</p>
+                    <input type="range" id="body" th:field="*{body}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3 class="font-display text-sm font-bold uppercase tracking-widest text-amber-500">The Palate - Taste Profile</h3>
+            <div class="mt-3 space-y-3">
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="mineralIntensity" class="text-sm font-semibold text-slate-200">Mineral Intensity</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Low / None [1] &rarr; High / Intense [5]</p>
+                    <input type="range" id="mineralIntensity" th:field="*{mineralIntensity}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="sweetness" class="text-sm font-semibold text-slate-200">Sweetness</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Dry [1] &rarr; Sweet [5]</p>
+                    <input type="range" id="sweetness" th:field="*{sweetness}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="bitterness" class="text-sm font-semibold text-slate-200">Bitterness</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">None [1] &rarr; Sharp / Bitter [5]</p>
+                    <input type="range" id="bitterness" th:field="*{bitterness}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="salinity" class="text-sm font-semibold text-slate-200">Salinity</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Fresh [1] &rarr; Salty / Brackish [5]</p>
+                    <input type="range" id="salinity" th:field="*{salinity}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="phSensation" class="text-sm font-semibold text-slate-200">pH Sensation</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Acidic / Sharp [1] &rarr; Alkaline / Smooth [5]</p>
+                    <input type="range" id="phSensation" th:field="*{phSensation}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3 class="font-display text-sm font-bold uppercase tracking-widest text-amber-500">The Finish - Aftertaste</h3>
+            <div class="mt-3 space-y-3">
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="duration" class="text-sm font-semibold text-slate-200">Duration</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Short / Clean [1] &rarr; Long / Lingering [5]</p>
+                    <input type="range" id="duration" th:field="*{duration}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3 class="font-display text-sm font-bold uppercase tracking-widest text-amber-500">Overall Assessment</h3>
+            <div class="mt-3 space-y-3">
+                <div class="slider-card rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="harmony" class="text-sm font-semibold text-slate-200">Harmony</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Unbalanced / Harsh [1] &rarr; Perfectly Balanced [5]</p>
+                    <input type="range" id="harmony" th:field="*{harmony}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+
+                <div class="slider-card rounded-xl border border-amber-400/30 bg-amber-400/5 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="personalEnjoyment" class="text-sm font-semibold text-slate-100">Personal Enjoyment</label>
+                        <span class="value-badge text-sm font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-lg px-2 py-0.5">3</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-400">Not my cup (or glass) [1] &rarr; Absolute Favorite [5]</p>
+                    <input type="range" id="personalEnjoyment" th:field="*{personalEnjoyment}" min="1" max="5" step="1"
+                           class="mt-3 w-full accent-amber-400 cursor-pointer"
+                           oninput="updateValue(this)">
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3 class="font-display text-sm font-bold uppercase tracking-widest text-amber-500">Adventurer's Notes</h3>
+            <div class="mt-3">
+                <textarea id="notes" th:field="*{notes}" rows="4"
+                          placeholder='e.g. Tastes like it was filtered through a dragon&apos;s scale.'
+                          class="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm placeholder-slate-500 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"></textarea>
+            </div>
+        </section>
+
+        <button type="submit"
+                class="w-full rounded-xl bg-amber-400 px-6 py-3.5 text-base font-bold text-slate-950 shadow-lg shadow-amber-400/20 hover:bg-amber-300 active:scale-[0.99] transition-all">
+            Record Tasting
+        </button>
+    </form>
+</main>
+
+<script>
+    function updateValue(slider) {
+        const badge = slider.closest('.slider-card').querySelector('.value-badge');
+        if (badge) {
+            badge.textContent = slider.value;
+        }
+    }
+</script>
+
+</body>
+</html>
