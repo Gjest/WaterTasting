@@ -4,32 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Water Tasting Dashboard - D&D Weekend</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        ink: '#0a0806',
-                        coal: '#120e08',
-                        ember: '#1b140b',
-                        gold: '#f2c14e',
-                        parchment: '#e6d5a8',
-                        sepia: '#a58e63',
-                        bone: '#8a7a5c'
-                    },
-                    fontFamily: {
-                        display: ['"Cinzel"', 'serif'],
-                        body: ['"Lato"', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link th:href="@{/vendor/fonts.css}" rel="stylesheet">
+    <link th:href="@{/vendor/tailwind.css}" rel="stylesheet">
+    <script th:src="@{/vendor/chart.umd.min.js}"></script>
 </head>
 <body class="bg-ink text-parchment font-body min-h-screen antialiased">
 
@@ -43,6 +20,10 @@
             <button id="refreshBtn"
                     class="text-xs font-semibold text-parchment border border-gold/30 rounded-lg px-3 py-2 hover:border-gold hover:text-gold transition-colors">
                 Refresh
+            </button>
+            <button id="cleanupBtn"
+                    class="text-xs font-semibold text-parchment border border-gold/30 rounded-lg px-3 py-2 hover:border-gold hover:text-gold transition-colors">
+                Clean-up
             </button>
             <a th:href="@{/}"
                class="text-xs font-semibold text-ink bg-gold rounded-lg px-3 py-2 hover:bg-parchment transition-colors">
@@ -168,6 +149,41 @@
     </section>
 
 </main>
+
+<div id="cleanupModal" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4">
+    <div id="cleanupBackdrop" class="absolute inset-0 bg-ink/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-lg rounded-xl border border-gold/30 bg-coal p-6 max-h-[85vh] overflow-y-auto">
+        <h2 id="cleanupTitle" class="font-display text-lg font-bold text-gold">Merge Sample Names</h2>
+        <p class="mt-1 text-xs text-bone">Select the duplicate names, choose the true name, and the ledger shall be corrected.</p>
+        <div class="mt-4 flex gap-2">
+            <button id="cleanupModeSamples" type="button" data-mode="samples"
+                    class="cleanup-mode text-xs font-semibold rounded-lg border px-3 py-1.5 transition-colors">
+                Samples
+            </button>
+            <button id="cleanupModeAdventurers" type="button" data-mode="adventurers"
+                    class="cleanup-mode text-xs font-semibold rounded-lg border px-3 py-1.5 transition-colors">
+                Adventurers
+            </button>
+        </div>
+        <div id="cleanupError" class="hidden mt-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300 px-3 py-2 text-xs font-semibold"></div>
+        <div id="cleanupList" class="mt-4 space-y-2"></div>
+        <label for="mergeTargetSelect" class="block mt-5 text-xs uppercase tracking-widest text-bone">Merge into</label>
+        <select id="mergeTargetSelect"
+                class="mt-2 w-full rounded-lg border border-gold/30 bg-ember text-parchment px-4 py-2.5 text-sm focus:border-gold focus:outline-none"></select>
+        <input id="mergeTargetNew" type="text" maxlength="255" placeholder="...or a brand-new name"
+               class="mt-2 w-full rounded-lg border border-gold/30 bg-ember text-parchment px-4 py-2.5 text-sm focus:border-gold focus:outline-none">
+        <div class="mt-6 flex justify-end gap-2">
+            <button id="cleanupCancel" type="button"
+                    class="text-xs font-semibold text-parchment border border-gold/30 rounded-lg px-4 py-2 hover:border-gold hover:text-gold transition-colors">
+                Cancel
+            </button>
+            <button id="cleanupConfirm" type="button" disabled
+                    class="text-xs font-semibold text-ink bg-gold rounded-lg px-4 py-2 hover:bg-parchment transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                Merge
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
     const METRICS = [
@@ -362,33 +378,41 @@
     function renderComparison() {
         setSectionState('comparison', allTastings.length > 0);
         if (!allTastings.length) { return; }
-        const allMin = metricsValues(allTastings, 'mineralIntensity');
-        const threshold = meanOf(allMin);
-        const high = allTastings.filter(function (t) { return Number(t.mineralIntensity) >= threshold; });
-        const low = allTastings.filter(function (t) { return Number(t.mineralIntensity) < threshold; });
-        document.getElementById('mineralNote').textContent =
-            'High Mineral: ' + high.length + ' tasting(s) at mineral intensity >= ' + threshold.toFixed(2)
-            + '   |   Low Mineral: ' + low.length + ' tasting(s) below it.';
+        const samples = buildSamples();
+        const threshold = meanOf(samples.map(function (s) { return s.stats.mineralIntensity.mean; }));
+        const highIds = new Set();
+        for (const s of samples) {
+            if (s.stats.mineralIntensity.mean >= threshold) { highIds.add(s.id); }
+        }
+        const high = allTastings.filter(function (t) { return highIds.has(t.waterSampleId); });
+        const low = allTastings.filter(function (t) { return !highIds.has(t.waterSampleId); });
+        const highSampleCount = highIds.size;
+        const lowSampleCount = samples.length - highIds.size;
+        document.getElementById('mineralNote').textContent = lowSampleCount === 0
+            ? 'Every sample averages the same mineral intensity (' + threshold.toFixed(2) + '), so there is no Low Mineral camp to battle.'
+            : 'High Mineral: ' + highSampleCount + ' sample(s) averaging mineral intensity >= ' + threshold.toFixed(2)
+              + '   |   Low Mineral: ' + lowSampleCount + ' sample(s) below it. Samples are assigned as a whole, never split.';
+        const datasets = [{
+            label: 'High Mineral',
+            data: METRICS.map(function (m) { return meanOf(metricsValues(high, m.key)); }),
+            backgroundColor: GOLD,
+            borderRadius: 4,
+            maxBarThickness: 22
+        }];
+        if (low.length) {
+            datasets.push({
+                label: 'Low Mineral',
+                data: METRICS.map(function (m) { return meanOf(metricsValues(low, m.key)); }),
+                backgroundColor: LOW,
+                borderRadius: 4,
+                maxBarThickness: 22
+            });
+        }
         renderChart('mineralChart', {
             type: 'bar',
             data: {
                 labels: METRICS.map(function (m) { return m.label; }),
-                datasets: [
-                    {
-                        label: 'High Mineral',
-                        data: METRICS.map(function (m) { return meanOf(metricsValues(high, m.key)); }),
-                        backgroundColor: GOLD,
-                        borderRadius: 4,
-                        maxBarThickness: 22
-                    },
-                    {
-                        label: 'Low Mineral',
-                        data: METRICS.map(function (m) { return meanOf(metricsValues(low, m.key)); }),
-                        backgroundColor: LOW,
-                        borderRadius: 4,
-                        maxBarThickness: 22
-                    }
-                ]
+                datasets: datasets
             },
             options: {
                 plugins: { legend: { labels: { color: '#e6d5a8' } } },
@@ -559,6 +583,132 @@
         feed.innerHTML = html;
     }
 
+    const CLEANUP_MODES = {
+        samples: { title: 'Merge Sample Names', listUrl: '/api/samples', mergeUrl: '/api/samples/merge' },
+        adventurers: { title: 'Merge Adventurer Names', listUrl: '/api/adventurers', mergeUrl: '/api/adventurers/merge' }
+    };
+    let cleanupMode = 'samples';
+
+    function showCleanupError(message) {
+        const box = document.getElementById('cleanupError');
+        box.textContent = message;
+        box.classList.remove('hidden');
+    }
+
+    function checkedCleanupNames() {
+        return Array.from(document.querySelectorAll('#cleanupList input[type="checkbox"]:checked'))
+            .map(function (cb) { return cb.value; });
+    }
+
+    function updateMergeControls() {
+        const checked = checkedCleanupNames();
+        const select = document.getElementById('mergeTargetSelect');
+        const newName = document.getElementById('mergeTargetNew').value.trim();
+        const current = select.value;
+        select.innerHTML = '';
+        for (const name of checked) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        }
+        if (checked.indexOf(current) !== -1) { select.value = current; }
+        document.getElementById('cleanupConfirm').disabled =
+            !(checked.length >= 2 || (checked.length >= 1 && newName !== ''));
+    }
+
+    async function loadCleanupList() {
+        const mode = CLEANUP_MODES[cleanupMode];
+        const list = document.getElementById('cleanupList');
+        document.getElementById('cleanupTitle').textContent = mode.title;
+        document.getElementById('cleanupError').classList.add('hidden');
+        document.getElementById('mergeTargetNew').value = '';
+        document.querySelectorAll('.cleanup-mode').forEach(function (btn) {
+            const isActive = btn.dataset.mode === cleanupMode;
+            btn.classList.toggle('bg-gold', isActive);
+            btn.classList.toggle('text-ink', isActive);
+            btn.classList.toggle('border-gold', isActive);
+            btn.classList.toggle('text-sepia', !isActive);
+            btn.classList.toggle('border-white/10', !isActive);
+        });
+        list.innerHTML = '<p class="text-xs text-bone">Consulting the ledger...</p>';
+        try {
+            const response = await fetch(mode.listUrl);
+            if (!response.ok) { throw new Error('HTTP ' + response.status); }
+            const names = await response.json();
+            list.innerHTML = '';
+            if (!names.length) {
+                list.innerHTML = '<p class="text-xs text-bone">The ledger is empty. Nothing to merge.</p>';
+            }
+            for (const entry of names) {
+                const label = document.createElement('label');
+                label.className = 'flex items-center gap-3 rounded-lg border border-gold/20 bg-ember px-3 py-2 cursor-pointer hover:border-gold/50 transition-colors';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = entry.name;
+                checkbox.className = 'accent-[#f2c14e]';
+                checkbox.addEventListener('change', updateMergeControls);
+                const text = document.createElement('span');
+                text.className = 'text-sm text-parchment';
+                // Quote the name so variants differing only in whitespace stay distinguishable.
+                text.textContent = '"' + entry.name + '" (' + entry.count + ' tasting' + (entry.count === 1 ? '' : 's') + ')';
+                label.appendChild(checkbox);
+                label.appendChild(text);
+                list.appendChild(label);
+            }
+        } catch (err) {
+            list.innerHTML = '';
+            showCleanupError('The ledger could not be read. Try again.');
+        }
+        updateMergeControls();
+    }
+
+    function openCleanup() {
+        document.getElementById('cleanupModal').classList.remove('hidden');
+        loadCleanupList();
+    }
+
+    function closeCleanup() {
+        document.getElementById('cleanupModal').classList.add('hidden');
+    }
+
+    async function confirmMerge() {
+        const mode = CLEANUP_MODES[cleanupMode];
+        const sources = checkedCleanupNames();
+        const newName = document.getElementById('mergeTargetNew').value.trim();
+        const target = newName !== '' ? newName : document.getElementById('mergeTargetSelect').value;
+        if (!target || !sources.length) { return; }
+        const confirmBtn = document.getElementById('cleanupConfirm');
+        confirmBtn.disabled = true;
+        try {
+            const response = await fetch(mode.mergeUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: target, sources: sources })
+            });
+            if (!response.ok) { throw new Error('HTTP ' + response.status); }
+            closeCleanup();
+            loadData();
+        } catch (err) {
+            showCleanupError('The merge failed (' + err.message + '). The ledger is unchanged.');
+            confirmBtn.disabled = false;
+        }
+    }
+
+    function bindCleanup() {
+        document.getElementById('cleanupBtn').addEventListener('click', openCleanup);
+        document.getElementById('cleanupCancel').addEventListener('click', closeCleanup);
+        document.getElementById('cleanupBackdrop').addEventListener('click', closeCleanup);
+        document.getElementById('cleanupConfirm').addEventListener('click', confirmMerge);
+        document.getElementById('mergeTargetNew').addEventListener('input', updateMergeControls);
+        document.querySelectorAll('.cleanup-mode').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                cleanupMode = btn.dataset.mode;
+                loadCleanupList();
+            });
+        });
+    }
+
     const renderers = {
         rankings: renderRankings,
         highlights: renderHighlights,
@@ -624,6 +774,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         bindTabs();
+        bindCleanup();
         loadData();
     });
 </script>
