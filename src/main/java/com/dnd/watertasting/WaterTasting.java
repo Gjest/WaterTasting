@@ -11,8 +11,9 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "tastings")
@@ -23,10 +24,12 @@ public class WaterTasting {
     private Long id;
 
     @NotBlank(message = "Adventurer name is required")
+    @Size(max = 255, message = "Adventurer name must be at most 255 characters")
     @Column(nullable = false)
     private String adventurerName;
 
     @NotBlank(message = "Water Sample ID is required")
+    @Size(max = 255, message = "Water Sample ID must be at most 255 characters")
     @Column(name = "water_sample_id", nullable = false)
     private String waterSampleId;
 
@@ -114,15 +117,16 @@ public class WaterTasting {
     @Column(name = "personal_enjoyment", nullable = false)
     private Integer personalEnjoyment;
 
+    @Size(max = 2000, message = "Notes must be at most 2000 characters")
     @Column(name = "notes", length = 2000)
     private String notes;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @PrePersist
     void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now();
     }
 
     public Long getId() {
@@ -269,11 +273,11 @@ public class WaterTasting {
         this.notes = notes;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 }

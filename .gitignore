@@ -2,6 +2,9 @@
 .gradle/
 build/
 
+# Local H2 database (contains tasting data, never commit)
+data/
+
 # Maven (legacy)
 target/
 
